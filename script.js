@@ -10,11 +10,11 @@ const firebaseConfig = {
     appId: "1:668337469201:web:cd9d84d45c93d9b6e3feb0"
 };
 
-// === DODANE: Importy modularne Firebase SDK v9 ===
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
-import { getFirestore, collection, getDocs, orderBy, query, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
-import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js'; 
-import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js'; 
+// === DODANE: Importy modularne Firebase SDK v10.0.0 ===
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
+import { getFirestore, collection, getDocs, orderBy, query, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js'; 
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-functions.js'; 
 
 // Inicjalizacja Firebase (teraz używamy modularnych funkcji)
 const app = initializeApp(firebaseConfig);
@@ -50,12 +50,14 @@ const leaderboardScreen = document.getElementById('leaderboard-screen');
 const leaderboardList = document.getElementById('leaderboard-list');
 const backToStartButton = document.getElementById('back-to-start-button');
 
-let score = 0; 
-let ozzyHealth = 100; 
-let INITIAL_OZZY_HEALTH = 100; 
-const PUNCH_DAMAGE = 10; 
-let isOzzyDown = false; 
+let score = 0; // Teraz score to liczba znokautowań
+let ozzyHealth = 100; // Początkowe zdrowie Ozzy'ego
+let INITIAL_OZZY_HEALTH = 100; // Zmieniono na let, aby można było zwiększać trudność
+const PUNCH_DAMAGE = 10; // Obrażenia za jedno uderzenie
+let isOzzyDown = false; // Flaga, czy Ozzy jest znokautowany/w animacji
 let currentUserId = null; 
+let isGameActive = false; // <<< POPRAWIONO: Dodano deklarację isGameActive
+
 
 // --- Referencje do elementów audio ---
 const backgroundMusic = document.getElementById('background-music');
@@ -124,7 +126,7 @@ function resetGame() {
 
     messageDisplay.style.display = 'none';
 
-    isGameActive = false;
+    isGameActive = false; // Teraz ta zmienna jest prawidłowo zadeklarowana
     isOzzyDown = false; 
     endScreen.classList.add('hidden');
     leaderboardScreen.classList.add('hidden');
