@@ -50,13 +50,13 @@ const leaderboardScreen = document.getElementById('leaderboard-screen');
 const leaderboardList = document.getElementById('leaderboard-list');
 const backToStartButton = document.getElementById('back-to-start-button');
 
-let score = 0; // Teraz score to liczba znokautowań
-let ozzyHealth = 100; // Początkowe zdrowie Ozzy'ego
-let INITIAL_OZZY_HEALTH = 100; // Zmieniono na let, aby można było zwiększać trudność
-const PUNCH_DAMAGE = 10; // Obrażenia za jedno uderzenie
-let isOzzyDown = false; // Flaga, czy Ozzy jest znokautowany/w animacji
+let score = 0; 
+let ozzyHealth = 100; 
+let INITIAL_OZZY_HEALTH = 100; 
+const PUNCH_DAMAGE = 10; 
+let isOzzyDown = false; 
 let currentUserId = null; 
-let isGameActive = false; // <<< POPRAWIONO: Dodano deklarację isGameActive
+let isGameActive = false; 
 
 
 // --- Referencje do elementów audio ---
@@ -66,7 +66,7 @@ const punchSound = document.getElementById('punch-sound');
 
 // --- Funkcje Leaderboarda ---
 async function saveScoreToLeaderboard(nickname, score) {
-    console.log("saveScoreToLeaderboard wywołane z nickiem:", nickname, "wynikiem:", score); // DIAGNOSTYKA
+    console.log("saveScoreToLeaderboard wywołane z nickiem:", nickname, "wynikiem:", score); 
     if (score > 200) { 
         showMessage("Spierdalaj frajerze cheaterze! Wynik nierealny!", 3000); 
         console.warn(`Próba zapisu nierealnego wyniku (${score}) przez ${nickname}. Zablokowano po stronie klienta.`);
@@ -90,8 +90,8 @@ async function saveScoreToLeaderboard(nickname, score) {
 }
 
 async function fetchAndDisplayLeaderboard() {
-    console.log("fetchAndDisplayLeaderboard wywołane."); // DIAGNOSTYKA
-    leaderboardList.innerHTML = '';
+    console.log("fetchAndDisplayLeaderboard wywołane."); 
+    leaderboardList.innerHTML = ''; // Wyczyść listę przed załadowaniem
     try {
         const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), orderBy("timestamp", "asc"), limit(10));
         const snapshot = await getDocs(q);
@@ -115,22 +115,22 @@ async function fetchAndDisplayLeaderboard() {
 
 // --- Funkcje Gry ---
 function resetGame() {
-    console.log("resetGame wywołane."); // DIAGNOSTYKA
+    console.log("resetGame wywołane."); 
     score = 0;
     scoreDisplay.textContent = score;
     INITIAL_OZZY_HEALTH = 100; 
     ozzyHealth = INITIAL_OZZY_HEALTH;
     updateHealthBar();
     ozzyImage.classList.remove('hit-effect'); 
-    ozzyContainer.classList.add('hidden'); 
+    ozzyContainer.classList.add('hidden'); // Ukryj Ozzy'ego na starcie
 
     messageDisplay.style.display = 'none';
 
-    isGameActive = false; // Teraz ta zmienna jest prawidłowo zadeklarowana
+    isGameActive = false; 
     isOzzyDown = false; 
     endScreen.classList.add('hidden');
-    leaderboardScreen.classList.add('hidden');
-    startScreen.classList.remove('hidden');
+    leaderboardScreen.classList.add('hidden'); // Ukryj ranking
+    startScreen.classList.remove('hidden'); // Pokaż ekran startowy
     
     if (backgroundMusic) {
         backgroundMusic.pause();
@@ -162,9 +162,10 @@ function updateHealthBar() {
 }
 
 function startGame() {
-    console.log("startGame wywołane."); // DIAGNOSTYKA
+    console.log("startGame wywołane."); 
     startScreen.classList.add('hidden'); 
-    ozzyContainer.classList.remove('hidden'); 
+    ozzyContainer.classList.remove('hidden'); // Pokaż Ozzy'ego
+    scoreDisplay.classList.remove('hidden'); // Pokaż licznik
     isGameActive = true;
     score = 0;
     scoreDisplay.textContent = score;
@@ -179,9 +180,10 @@ function startGame() {
 }
 
 function endGame(message) {
-    console.log("endGame wywołane z wiadomością:", message); // DIAGNOSTYKA
+    console.log("endGame wywołane z wiadomością:", message); 
     isGameActive = false;
-    ozzyContainer.classList.add('hidden'); 
+    ozzyContainer.classList.add('hidden'); // Ukryj Ozzy'ego po zakończeniu gry
+    scoreDisplay.classList.add('hidden'); // Ukryj licznik
     messageDisplay.style.display = 'none';
 
     document.getElementById('end-message').textContent = message;
@@ -198,7 +200,7 @@ function endGame(message) {
 }
 
 function handlePunch(event) {
-    console.log("handlePunch wywołane."); // DIAGNOSTYKA
+    console.log("handlePunch wywołane."); 
     if (!isGameActive || isOzzyDown) { 
         return;
     }
@@ -237,15 +239,25 @@ function handlePunch(event) {
     }
 }
 
-
-// ---- Obsługa zdarzeń (przeniesione do DOMContentLoaded) ----
-
 // Ważne: to sprawdza, czy skrypt jest w ogóle uruchamiany
-console.log("Script.js jest uruchamiany!"); // DIAGNOSTYKA
+console.log("Script.js jest uruchamiany!"); 
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log("DOMContentLoaded: DOM został załadowany!"); // DIAGNOSTYKA
-    resetGame(); 
+    console.log("DOMContentLoaded: DOM został załadowany!"); 
+    
+    // Upewnij się, że wszystkie ekrany są początkowo ukryte, z wyjątkiem startScreen
+    startScreen.classList.add('hidden');
+    endScreen.classList.add('hidden');
+    leaderboardScreen.classList.add('hidden');
+    ozzyContainer.classList.add('hidden');
+    scoreDisplay.classList.add('hidden'); // Ukryj licznik punktów na starcie
+    messageDisplay.style.display = 'none';
+
+    // Pokaż ekran startowy dopiero po ukryciu wszystkich innych
+    startScreen.classList.remove('hidden');
+
+    resetGame(); // Resetuje stan gry, ale resetGame w tym momencie głównie ukryje rzeczy
+
     console.log("Initial game container dimensions:", gameContainer.offsetWidth, gameContainer.offsetHeight);
     console.log("Initial target image (Ozzy) dimensions:", ozzyImage.offsetWidth, ozzyImage.offsetHeight);
 
@@ -258,11 +270,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error("Błąd logowania anonimowego:", error);
         showMessage("Błąd połączenia z rankingiem. Spróbuj odświeżyć stronę.", 5000);
     }
-    console.log("DOMContentLoaded: Uwierzytelnianie zakończone."); // DIAGNOSTYKA
+    console.log("DOMContentLoaded: Uwierzytelnianie zakończone."); 
 
     // PRZENIESIONE OBSŁUGI ZDARZEŃ
     startButton.addEventListener('click', () => {
-        console.log("Kliknięto przycisk START!"); // DIAGNOSTYKA
+        console.log("Kliknięto przycisk START!"); 
         const nick = nicknameInput.value.trim();
         if (nick === "") {
             showMessage("Musisz wpisać swój nick!", 2000);
@@ -273,14 +285,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     showLeaderboardButton.addEventListener('click', () => {
-        console.log("Kliknięto przycisk RANKING!"); // DIAGNOSTYKA
+        console.log("Kliknięto przycisk RANKING!"); 
         startScreen.classList.add('hidden');
         leaderboardScreen.classList.remove('hidden');
         fetchAndDisplayLeaderboard();
     });
 
     restartButton.addEventListener('click', () => {
-        console.log("Kliknięto przycisk RESTART!"); // DIAGNOSTYKA
+        console.log("Kliknięto przycisk RESTART!"); 
         resetGame();
     });
 
@@ -291,15 +303,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, { passive: false });
 
     showLeaderboardAfterGameButton.addEventListener('click', () => {
-        console.log("Kliknięto przycisk ZOBACZ RANKING (po grze)!"); // DIAGNOSTYKA
+        console.log("Kliknięto przycisk ZOBACZ RANKING (po grze)!"); 
         endScreen.classList.add('hidden');
         leaderboardScreen.classList.remove('hidden');
         fetchAndDisplayLeaderboard();
     });
 
     backToStartButton.addEventListener('click', () => {
-        console.log("Kliknięto przycisk WRÓĆ DO MENU!"); // DIAGNOSTYKA
-        leaderboardScreen.classList.add('hidden');
-        resetGame();
+        console.log("Kliknięto przycisk WRÓĆ DO MENU!"); 
+        leaderboardScreen.classList.add('hidden'); // Ukryj ranking
+        startScreen.classList.remove('hidden'); // Pokaż ekran startowy
+        resetGame(); // Zresetuj inne elementy gry
     });
 });
