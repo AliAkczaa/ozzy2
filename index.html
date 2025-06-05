@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zajeb Ozzyemu!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Zmienione tło, dostosuj obrazek -->
+        <img id="animated-background-tractor" src="zdjecie 1 - tlo.jpg" alt="Tło areny walki" draggable="false">
+        
+        <div id="ozzy-container" class="hidden">
+            <!-- Używamy zdjecie 2.jpg dla Ozzy'ego -->
+            <img id="ozzy-image" src="zdjecie 2.jpg" alt="Ozzy do pobicia" draggable="false">
+            <!-- Pasek zdrowia dla Ozzy'ego -->
+            <div id="health-bar-container">
+                <div id="health-bar-fill"></div>
+            </div>
+        </div>
+        
+        <div id="start-screen">
+            <h1>Zajeb Ozzyemu!</h1>
+            <p>Ozzy znowu zjadł całe gówno! Twoje zadanie: napierdalaj Ozzy'ego, aż padnie! Im więcej razy znokautujesz, tym lepiej!</p>
+            <div id="nick-input-container">
+                <label for="nickname-input">Twój Nick:</label>
+                <input type="text" id="nickname-input" placeholder="Wpisz swój nick" maxlength="15">
+            </div>
+            <button id="start-button">Rozpocznij Okładanie!</button>
+            <button id="show-leaderboard-button">Ranking</button>
+        </div>
+
+        <div id="end-screen" class="hidden">
+            <h1>Ozzy Znokautowany!</h1>
+            <p id="end-message">Gratulacje! Znokautowałeś Ozzy'ego!</p>
+            <p id="final-score-display">Ozzy znokautowany: <span id="final-score">0</span> razy!</p>
+            <button id="restart-button">Zagraj Jeszcze Raz!</button>
+            <button id="show-leaderboard-after-game-button">Zobacz Ranking</button>
+        </div>
+
+        <div id="leaderboard-screen" class="hidden">
+            <h2>Ranking Najlepszych Bójkarzy</h2>
+            <ol id="leaderboard-list"></ol>
+            <button id="back-to-start-button">Wróć do menu</button>
+        </div>
+
+        <div id="score-display">Znokautowania: <span id="score">0</span></div>
+        <div id="message-display"></div>
+    </div>
+
+    <!-- Dźwięki do gry -->
+    <audio id="background-music" loop>
+        <source src="traktor.mp3" type="audio/mpeg"> <!-- Zastąp odpowiednią muzyką tła -->
+        Twoja przeglądarka nie obsługuje elementu audio.
+    </audio>
+    <audio id="punch-sound">
+        <source src="punch.mp3" type="audio/mpeg"> <!-- Nowy dźwięk uderzenia -->
+        Twoja przeglądarka nie obsługuje elementu audio.
+    </audio>
+
+    <!-- Pamiętaj o type="module" dla script.js -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js"></script>
+    
+    <script src="script.js" type="module"></script>
+</body>
+</html>
