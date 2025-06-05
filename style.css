@@ -1,14 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 body {
-    font-family: 'Press Start 2P', 'Comic Sans MS', cursive, sans-serif;
+    font-family: 'Press Start 2P', cursive;
+    color: lime; /* Neonowy zielony kolor tekstu */
+    text-shadow: 2px 2px 4px rgba(0, 255, 0, 0.5); /* Lekki cień na tekst */
+    background-color: #1a1a1a; /* Bardzo ciemne tło */
     margin: 0;
     overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background-color: #1a1a1a; /* Bardzo ciemne tło */
 
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -26,7 +28,7 @@ body {
     align-items: center;
     border: 5px solid lime; /* Neonowa ramka */
     box-shadow: 0 0 20px lime; /* Neonowy blask */
-    overflow: hidden; /* Upewnij się, że nic nie wycieka poza kontener */
+    overflow: hidden; 
 }
 
 #animated-background-tractor {
@@ -39,7 +41,33 @@ body {
     z-index: 1; /* Tło jest na spodzie */
 }
 
-/* Nowe/zmodyfikowane elementy dla Zajeb Ozzyemu */
+/* NOWY KONTENER NA OBRAZKI Z CYTATAMI */
+#quote-images-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 5; /* Pomiędzy tłem (1) a Ozzym (10) */
+    pointer-events: none; /* WAŻNE: Pozwól na klikanie Ozzy'ego przez te obrazy */
+}
+
+.quote-image {
+    position: absolute;
+    width: 150px; /* Rozmiar obrazka cytatu */
+    height: auto;
+    opacity: 0; /* Domyślnie niewidoczny, pojawi się z animacją */
+    transition: opacity 0.5s ease-in-out, transform 0.5s ease-out; /* Animacja pojawiania/znikania */
+    object-fit: contain;
+}
+
+/* Kiedy obrazek cytatu jest aktywny */
+.quote-image.active {
+    opacity: 1;
+}
+
+/* Kontener dla Ozzy'ego i jego paska zdrowia */
 #ozzy-container {
     position: absolute;
     top: 50%;
@@ -50,20 +78,18 @@ body {
     align-items: center;
     justify-content: center;
     cursor: grab; /* Kursor, który sugeruje chwytanie/uderzenie */
-    user-select: none; /* Zapobiega zaznaczaniu tekstu/obrazu */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    z-index: 10; /* WAŻNE: Ustawiamy wyższy z-index, aby Ozzy był nad tłem */
+    user-select: none; 
+    z-index: 10; /* WAŻNE: Ustawiamy wyższy z-index, aby Ozzy był nad tłem i cytatami */
 }
 
 #ozzy-image {
     width: 200px; /* Dostosuj rozmiar Ozzy'ego */
     height: auto;
-    border-radius: 15px; /* Możesz zmienić na 50% dla owalnego Ozzy'ego */
+    border-radius: 50%; /* Aby był owalny */
     transition: transform 0.05s ease-out, filter 0.05s ease-out; /* Szybka reakcja na uderzenie */
     border: 5px solid #FFD700; /* Złota ramka dla Ozzy'ego */
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.7); /* Złoty blask */
+    object-fit: cover; /* Upewnij się, że obrazek wypełnia koło */
 }
 
 /* Animacja drżenia po uderzeniu */
@@ -127,7 +153,7 @@ button {
     cursor: pointer;
     box-shadow: 0 4px 8px rgba(0, 255, 0, 0.3);
     transition: all 0.2s ease-in-out;
-    margin-top: 2vh; /* Dodany margines, aby przyciski nie były zlepione */
+    margin-top: 2vh; 
 }
 
 button:hover {
@@ -148,7 +174,7 @@ button:active {
     border-radius: 10px;
     padding: 10px 15px;
     box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
-    z-index: 20; /* Zapewnij, że są widoczne */
+    z-index: 20; 
 }
 
 #score-display {
@@ -175,9 +201,10 @@ button:active {
     display: none;
     border: 5px solid red;
     box-shadow: 0 0 30px red;
-    z-index: 30; /* Nadal na wierzchu dla komunikatów */
+    z-index: 30; 
 }
 
+/* Style dla ekranów, z jawny display: none */
 #start-screen, #end-screen, #leaderboard-screen {
     position: absolute;
     top: 0;
@@ -186,15 +213,31 @@ button:active {
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.9);
     color: white;
-    display: flex;
+    display: flex; /* Domyślny display dla tych ekranów */
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
-    z-index: 40; /* Ekrany nakładkowe są na samym wierzchu */
+    z-index: 40; 
     padding: 2vw;
     box-sizing: border-box;
 }
+
+/* JAWNE UKRYWANIE EKRANÓW KOŃCOWYCH I RANKINGU PRZEZ CSS */
+#end-screen, #leaderboard-screen {
+    display: none; 
+}
+
+/* Domyślny stan dla ekranu startowego (może być nadpisany przez JS) */
+#start-screen {
+    display: flex; /* Upewniamy się, że start-screen jest widoczny domyślnie */
+}
+
+
+.hidden { /* Klasa .hidden musi mieć !important, aby zawsze działała */
+    display: none !important;
+}
+
 
 #start-screen h1, #end-screen h1, #leaderboard-screen h2 {
     font-size: 7vmin;
@@ -295,7 +338,7 @@ button:active {
 
 /* Media Queries - dostosowanie rozmiaru Ozzy'ego na małych ekranach */
 @media (max-width: 768px) {
-    #ozzy-image { /* Dostosuj rozmiar Ozzy'ego na małych ekranach */
+    #ozzy-image { 
         width: 150px; 
         height: auto;
     }
@@ -312,7 +355,7 @@ button:active {
 
 @media (min-width: 1200px) {
     #ozzy-image {
-        width: 250px; /* Większy Ozzy na dużych ekranach */
+        width: 250px; 
     }
     #health-bar-container {
         max-width: 400px;

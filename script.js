@@ -10,18 +10,19 @@ const firebaseConfig = {
     appId: "1:668337469201:web:cd9d84d45c93d9b6e3feb0"
 };
 
-// === DODANE: Importy modularne Firebase SDK v10.0.0 ===
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
-import { getFirestore, collection, getDocs, orderBy, query, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
-import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js'; 
-import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-functions.js'; 
+// WAŻNE: Usunięto wszystkie importy modularne Firebase SDK,
+// teraz używamy globalnego obiektu 'firebase' dostępnego dzięki firebase-compat.js
+// import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
+// import { getFirestore, collection, getDocs, orderBy, query, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
+// import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js'; 
+// import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-functions.js'; 
 
-// Inicjalizacja Firebase (teraz używamy modularnych funkcji)
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app); 
-const functions = getFunctions(app); 
-const submitScoreFunction = httpsCallable(functions, 'submitScore'); // Odwołanie do naszej funkcji chmurowej
+// Inicjalizacja Firebase (teraz używamy globalnego obiektu firebase)
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth(); 
+const functions = firebase.functions(); 
+const submitScoreFunction = functions.httpsCallable('submitScore'); // Odwołanie do naszej funkcji chmurowej
 
 // ===================================================================
 
@@ -58,6 +59,15 @@ let isOzzyDown = false;
 let currentUserId = null; 
 let isGameActive = false; 
 
+// --- NOWE: Referencje i zmienne dla obrazków cytatów ---
+const quoteImagesContainer = document.getElementById('quote-images-container');
+const quoteImagePaths = [
+    'ozzy1.png', 'ozzy2.png', 'ozzy3.png', 
+    'ozzy4.png', 'ozzy5.png', 'ozzy6.png'
+];
+const QUOTE_DISPLAY_DURATION_MS = 2000; // Czas wyświetlania cytatu
+const QUOTE_SIZE_PX = 150; // Rozmiar obrazków cytatów
+
 
 // --- Referencje do elementów audio ---
 const backgroundMusic = document.getElementById('background-music');
@@ -93,8 +103,12 @@ async function fetchAndDisplayLeaderboard() {
     console.log("fetchAndDisplayLeaderboard wywołane."); 
     leaderboardList.innerHTML = ''; // Wyczyść listę przed załadowaniem
     try {
-        const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), orderBy("timestamp", "asc"), limit(10));
-        const snapshot = await getDocs(q);
+        // Zmieniono na składnię kompatybilnościową dla Firestore
+        const snapshot = await db.collection("leaderboard")
+                                 .orderBy("score", "desc")
+                                 .orderBy("timestamp", "asc")
+                                 .limit(10)
+                                 .get();
 
         if (snapshot.empty) {
             leaderboardList.innerHTML = '<li>Brak wyników w rankingu. Bądź pierwszy!</li>';
@@ -113,6 +127,46 @@ async function fetchAndDisplayLeaderboard() {
     }
 }
 
+// --- NOWA FUNKCJA: Tworzenie i wyświetlanie losowych cytatów ---
+function spawnRandomQuote() {
+    const randomImagePath = quoteImagePaths[Math.floor(Math.random() * quoteImagePaths.length)];
+    
+    const img = document.createElement('img');
+    img.src = randomImagePath;
+    img.classList.add('quote-image'); // Klasa dla stylizacji CSS
+    
+    // Losowa pozycja w obrębie gameContainer, ale unikając krawędzi
+    const gameContainerRect = gameContainer.getBoundingClientRect();
+    const maxX = gameContainerRect.width - QUOTE_SIZE_PX;
+    const maxY = gameContainerRect.height - QUOTE_SIZE_PX;
+
+    // Upewnij się, że nie wychodzi poza kontener i ma trochę marginesu
+    const randomX = Math.random() * Math.max(0, maxX);
+    const randomY = Math.random() * Math.max(0, maxY);
+    
+    img.style.left = `${randomX}px`;
+    img.style.top = `${randomY}px`;
+
+    // Losowy kąt obrotu (-45 do +45 stopni)
+    const randomRotation = Math.random() * 90 - 45; // Losuje od -45 do 45
+    img.style.transform = `rotate(${randomRotation}deg)`;
+
+    quoteImagesContainer.appendChild(img);
+
+    // Aktywuj animację pojawiania się
+    setTimeout(() => {
+        img.classList.add('active');
+    }, 10); // Małe opóźnienie, aby CSS transition zadziałało
+
+    // Ustaw czas zniknięcia
+    setTimeout(() => {
+        img.classList.remove('active'); // Rozpocznij animację znikania
+        setTimeout(() => {
+            img.remove(); // Usuń element z DOM po zakończeniu animacji
+        }, 500); // Czas trwania animacji opactiy
+    }, QUOTE_DISPLAY_DURATION_MS);
+}
+
 // --- Funkcje Gry ---
 function resetGame() {
     console.log("resetGame wywołane."); 
@@ -124,12 +178,15 @@ function resetGame() {
     ozzyImage.classList.remove('hit-effect'); 
     ozzyContainer.classList.add('hidden'); // Ukryj Ozzy'ego na starcie
 
+    // Usuń wszystkie cytaty z ekranu przy resecie
+    quoteImagesContainer.innerHTML = ''; 
+
     messageDisplay.style.display = 'none';
 
     isGameActive = false; 
     isOzzyDown = false; 
     endScreen.classList.add('hidden');
-    leaderboardScreen.classList.add('hidden'); // Ukryj ranking
+    leaderboardScreen.classList.add('hidden'); 
     startScreen.classList.remove('hidden'); // Pokaż ekran startowy
     
     if (backgroundMusic) {
@@ -164,6 +221,7 @@ function updateHealthBar() {
 function startGame() {
     console.log("startGame wywołane."); 
     startScreen.classList.add('hidden'); 
+    console.log("Po hidden: startScreen display", window.getComputedStyle(startScreen).display); 
     ozzyContainer.classList.remove('hidden'); // Pokaż Ozzy'ego
     scoreDisplay.classList.remove('hidden'); // Pokaż licznik
     isGameActive = true;
@@ -173,6 +231,9 @@ function startGame() {
     ozzyHealth = INITIAL_OZZY_HEALTH; 
     updateHealthBar(); 
     ozzyImage.classList.remove('hit-effect'); 
+
+    // Usuń cytaty, jeśli jakieś zostały z poprzedniej sesji gry
+    quoteImagesContainer.innerHTML = '';
 
     if (backgroundMusic) {
         backgroundMusic.play().catch(e => console.error("Błąd odtwarzania backgroundMusic:", e));
@@ -185,6 +246,7 @@ function endGame(message) {
     ozzyContainer.classList.add('hidden'); // Ukryj Ozzy'ego po zakończeniu gry
     scoreDisplay.classList.add('hidden'); // Ukryj licznik
     messageDisplay.style.display = 'none';
+    quoteImagesContainer.innerHTML = ''; // Usuń wszystkie cytaty po zakończeniu gry
 
     document.getElementById('end-message').textContent = message;
     finalScoreDisplay.textContent = score;
@@ -218,6 +280,11 @@ function handlePunch(event) {
     setTimeout(() => {
         ozzyImage.classList.remove('hit-effect');
     }, 150); 
+    
+    // NOWE: Sprawdzamy, czy Ozzy został trafiony i czy jest szansa na pojawienie się cytatu
+    if (ozzyHealth > 0 && Math.random() < 0.3) { // 30% szans na pojawienie się cytatu po trafieniu
+        spawnRandomQuote();
+    }
 
     if (ozzyHealth <= 0) {
         isOzzyDown = true; 
@@ -246,24 +313,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("DOMContentLoaded: DOM został załadowany!"); 
     
     // Upewnij się, że wszystkie ekrany są początkowo ukryte, z wyjątkiem startScreen
-    startScreen.classList.add('hidden');
     endScreen.classList.add('hidden');
     leaderboardScreen.classList.add('hidden');
     ozzyContainer.classList.add('hidden');
-    scoreDisplay.classList.add('hidden'); // Ukryj licznik punktów na starcie
+    scoreDisplay.classList.add('hidden'); 
     messageDisplay.style.display = 'none';
+    quoteImagesContainer.innerHTML = ''; // Upewnij się, że kontener cytatów jest pusty na starcie
 
-    // Pokaż ekran startowy dopiero po ukryciu wszystkich innych
-    startScreen.classList.remove('hidden');
-
-    resetGame(); // Resetuje stan gry, ale resetGame w tym momencie głównie ukryje rzeczy
+    resetGame(); 
 
     console.log("Initial game container dimensions:", gameContainer.offsetWidth, gameContainer.offsetHeight);
     console.log("Initial target image (Ozzy) dimensions:", ozzyImage.offsetWidth, ozzyImage.offsetHeight);
 
     // Inicjalizacja uwierzytelniania anonimowego po załadowaniu DOM
     try {
-        const userCredential = await signInAnonymously(auth);
+        const userCredential = await auth.signInAnonymously();
         currentUserId = userCredential.user.uid;
         console.log("Zalogowano anonimowo. UID:", currentUserId);
     } catch (error) {
@@ -311,8 +375,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     backToStartButton.addEventListener('click', () => {
         console.log("Kliknięto przycisk WRÓĆ DO MENU!"); 
-        leaderboardScreen.classList.add('hidden'); // Ukryj ranking
-        startScreen.classList.remove('hidden'); // Pokaż ekran startowy
-        resetGame(); // Zresetuj inne elementy gry
+        leaderboardScreen.classList.add('hidden'); 
+        startScreen.classList.remove('hidden'); 
+        // resetGame() jest wywoływane przez backToStartButton do menu, więc nie ma potrzeby wywoływania go dwa razy
     });
 });

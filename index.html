@@ -11,13 +11,13 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- Zmienione tło, dostosuj obrazek -->
         <img id="animated-background-tractor" src="zdjecie 1 - tlo.jpg" alt="Tło areny walki" draggable="false">
         
+        <!-- NOWY KONTENER NA OBRAZKI Z CYTATAMI -->
+        <div id="quote-images-container"></div>
+        
         <div id="ozzy-container" class="hidden">
-            <!-- Używamy zdjecie 2.jpg dla Ozzy'ego -->
             <img id="ozzy-image" src="zdjecie 2.jpg" alt="Ozzy do pobicia" draggable="false">
-            <!-- Pasek zdrowia dla Ozzy'ego -->
             <div id="health-bar-container">
                 <div id="health-bar-fill"></div>
             </div>
@@ -52,17 +52,22 @@
         <div id="message-display"></div>
     </div>
 
-    <!-- Dźwięki do gry -->
     <audio id="background-music" loop>
-        <source src="traktor.mp3" type="audio/mpeg"> <!-- Zastąp odpowiednią muzyką tła -->
+        <source src="traktor.mp3" type="audio/mpeg">
         Twoja przeglądarka nie obsługuje elementu audio.
     </audio>
     <audio id="punch-sound">
-        <source src="punch.mp3" type="audio/mpeg"> <!-- Nowy dźwięk uderzenia -->
+        <source src="punch.mp3" type="audio/mpeg">
         Twoja przeglądarka nie obsługuje elementu audio.
     </audio>
 
-    <!-- Teraz tylko jeden tag script dla Twojego script.js z type="module" -->
-    <script src="script.js" type="module"></script>
+    <!-- BIBLIOTEKI FIREBASE W WERSJI "COMPAT" (DO TESTÓW LOKALNYCH) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+    
+    <!-- Twój główny skrypt, bez type="module" -->
+    <script src="script.js"></script>
 </body>
 </html>
