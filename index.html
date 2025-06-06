@@ -13,7 +13,6 @@
     <div id="game-container">
         <img id="animated-background-tractor" src="zdjecie 1 - tlo.jpg" alt="Tło areny walki" draggable="false">
         
-        <!-- NOWY KONTENER NA OBRAZKI Z CYTATAMI -->
         <div id="quote-images-container"></div>
         
         <div id="ozzy-container" class="hidden">
@@ -22,6 +21,11 @@
                 <div id="health-bar-fill"></div>
             </div>
         </div>
+
+        <!-- NOWE: Kontenery na efekty supermocy -->
+        <div id="lightning-effect" class="effect-overlay hidden"></div>
+        <div id="freeze-effect" class="effect-overlay hidden"></div>
+        <div id="frenzy-effect" class="effect-overlay hidden"></div>
         
         <div id="start-screen">
             <h1>Zajeb Ozzyemu!</h1>
@@ -30,7 +34,7 @@
                 <label for="nickname-input">Twój Nick:</label>
                 <input type="text" id="nickname-input" placeholder="Wpisz swój nick" maxlength="15">
             </div>
-            <button id="start-button">Rozpocznij!</button>
+            <button id="start-button">Rozpocznij Okładanie!</button>
             <button id="show-leaderboard-button">Ranking</button>
         </div>
 
@@ -48,15 +52,22 @@
             <button id="back-to-start-button">Wróć do menu</button>
         </div>
 
-        <div id="score-display">Znokautowania: <span id="score">0</span></div>
+        <div id="score-display">Zajebania: <span id="score">0</span></div>
         <div id="message-display"></div>
+
+        <!-- NOWE: Kontener na przyciski supermocy -->
+        <div id="superpower-buttons-container">
+            <button id="btn-lightning" class="superpower-button" disabled>⚡ Piorun Zagłady</button>
+            <button id="btn-freeze" class="superpower-button" disabled>❄️ Lodowy Wybuch</button>
+            <button id="btn-frenzy" class="superpower-button" disabled>🔥 Szał Bojowy</button>
+        </div>
     </div>
 
     <audio id="background-music" loop>
         <source src="traktor.mp3" type="audio/mpeg">
-        Twoja przeglądarka nie obsługuje elementu audio.
+        Your browser does not support the audio element.
     </audio>
-    <!-- Usunięto <audio id="punch-sound"> - będzie tworzone dynamicznie w JS -->
+    <!-- punch.mp3 jest odtwarzane dynamicznie w JS -->
 
     <!-- BIBLIOTEKI FIREBASE W WERSJI "COMPAT" (DO TESTÓW LOKALNYCH) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>

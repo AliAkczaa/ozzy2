@@ -10,13 +10,6 @@ const firebaseConfig = {
     appId: "1:668337469201:web:cd9d84d45c93d9b6e3feb0"
 };
 
-// WAŻNE: Usunięto wszystkie importy modularne Firebase SDK,
-// teraz używamy globalnego obiektu 'firebase' dostępnego dzięki firebase-compat.js
-// import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
-// import { getFirestore, collection, getDocs, orderBy, query, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
-// import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js'; 
-// import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-functions.js'; 
-
 // Inicjalizacja Firebase (teraz używamy globalnego obiektu firebase)
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -32,7 +25,7 @@ const ozzyContainer = document.getElementById('ozzy-container');
 const ozzyImage = document.getElementById('ozzy-image'); 
 const healthBarFill = document.getElementById('health-bar-fill'); 
 const scoreDisplay = document.getElementById('score');
-const messageDisplay = document.getElementById('message-display');
+const messageDisplay = document.getElementById('message-display'); // Do ogólnych komunikatów
 const gameContainer = document.getElementById('game-container');
 
 const startScreen = document.getElementById('start-screen');
@@ -54,25 +47,56 @@ const backToStartButton = document.getElementById('back-to-start-button');
 let score = 0; 
 let ozzyHealth = 100; 
 let INITIAL_OZZY_HEALTH = 100; 
-const PUNCH_DAMAGE = 10; 
-let isOzzyDown = false; 
+let PUNCH_DAMAGE = 10; // Zmieniono na let, bo będzie modyfikowane przez Szał Bojowy
 let currentUserId = null; 
 let isGameActive = false; 
 
-// --- NOWE: Referencje i zmienne dla obrazków cytatów ---
+// --- Referencje i zmienne dla obrazków cytatów ---
 const quoteImagesContainer = document.getElementById('quote-images-container');
 const quoteImagePaths = [
     'ozzy1.png', 'ozzy2.png', 'ozzy3.png', 
     'ozzy4.png', 'ozzy5.png', 'ozzy6.png'
 ];
-const QUOTE_DISPLAY_DURATION_MS = 2000; // Czas wyświetlania cytatu
-const QUOTE_SIZE_PX = 150; // Rozmiar obrazków cytatów
+const QUOTE_DISPLAY_DURATION_MS = 2000;
+const QUOTE_SIZE_PX = 150;
 
+// --- Elementy i zmienne dla supermocy ---
+const superpowerButtonsContainer = document.getElementById('superpower-buttons-container');
+const btnLightning = document.getElementById('btn-lightning');
+const btnFreeze = document.getElementById('btn-freeze'); // ID pozostaje 'btn-freeze'
+const btnFrenzy = document.getElementById('btn-frenzy');
+
+// Oryginalne teksty przycisków (do wyświetlania po zakończeniu cooldownu)
+const originalLightningText = '⚡ Piorun Zagłady';
+const originalFreezeText = '❄️ Lodowy Wybuch';
+const originalFrenzyText = '🔥 Szał Bojowy';
+
+
+const lightningEffect = document.getElementById('lightning-effect');
+const freezeEffect = document.getElementById('freeze-effect'); // ID pozostaje 'freeze-effect'
+const frenzyEffect = document.getElementById('frenzy-effect');
+
+const PUNCHES_PER_POWERUP = 10; // Ile uderzeń do aktywacji supermocy (próg)
+
+const COOLDOWN_DURATION_MS = 60 * 1000; // 60 sekund
+
+let lastUsedLightningTime = 0; // Timestamp ostatniego użycia Pioruna
+let lastUsedFreezeTime = 0; // Timestamp ostatniego użycia Lodowego Wybuchu
+let lastUsedFrenzyTime = 0; // Timestamp ostatniego użycia Szału Bojowego
+
+let frenzyModeActive = false;
+let frenzyTimerId;
+const FRENZY_DAMAGE_MULTIPLIER = 3; // Np. 3 razy większe obrażenia
+const FRENZY_DURATION_MS = 5000; // Czas trwania Szału Bojowego (5 sekund)
+
+const ICE_BLAST_DAMAGE = 50; // Obrażenia zadawane przez Lodowy Wybuch
+const FRENZY_INITIAL_DAMAGE = 30; // Początkowe obrażenia zadawane przez Szał Bojowy
+
+let superpowerCooldownIntervalId; // ID dla setInterval do aktualizacji timerów
 
 // --- Referencje do elementów audio ---
 const backgroundMusic = document.getElementById('background-music');
-// USUNIĘTO: const punchSound = document.getElementById('punch-sound'); - teraz tworzymy dynamicznie
-
+// punch.mp3 jest odtwarzane dynamicznie w JS
 
 // --- Funkcje Leaderboarda ---
 async function saveScoreToLeaderboard(nickname, score) {
@@ -127,7 +151,7 @@ async function fetchAndDisplayLeaderboard() {
     }
 }
 
-// --- NOWA FUNKCJA: Tworzenie i wyświetlanie losowych cytatów ---
+// --- Funkcje Cytatów ---
 function spawnRandomQuote() {
     const randomImagePath = quoteImagePaths[Math.floor(Math.random() * quoteImagePaths.length)];
     
@@ -167,6 +191,171 @@ function spawnRandomQuote() {
     }, QUOTE_DISPLAY_DURATION_MS);
 }
 
+// --- NOWA FUNKCJA: Ujednolicone zadawanie obrażeń ---
+function applyDamageToOzzy(damageAmount) {
+    ozzyHealth -= damageAmount;
+    ozzyHealth = Math.max(0, ozzyHealth);
+    updateHealthBar();
+    if (ozzyHealth <= 0) {
+        handleOzzyKnockout();
+    }
+}
+
+// --- Funkcje supermocy ---
+function updateSuperpowerButtons() {
+    const now = Date.now();
+
+    // Sprawdź próg uderzeń ORAZ cooldown dla każdego przycisku
+    const canUseLightning = (punchesSinceLastPowerup >= PUNCHES_PER_POWERUP) && 
+                            ((now - lastUsedLightningTime >= COOLDOWN_DURATION_MS) || lastUsedLightningTime === 0) && 
+                            isGameActive;
+    
+    const canUseFreeze = (punchesSinceLastPowerup >= PUNCHES_PER_POWERUP) && 
+                         ((now - lastUsedFreezeTime >= COOLDOWN_DURATION_MS) || lastUsedFreezeTime === 0) && 
+                         isGameActive;
+    
+    const canUseFrenzy = (punchesSinceLastPowerup >= PUNCHES_PER_POWERUP) && 
+                         ((now - lastUsedFrenzyTime >= COOLDOWN_DURATION_MS) || lastUsedFrenzyTime === 0) && 
+                         isGameActive;
+
+    btnLightning.disabled = !canUseLightning;
+    btnFreeze.disabled = !canUseFreeze;
+    btnFrenzy.disabled = !canUseFrenzy;
+
+    // Kontener przycisków jest klikalny, jeśli którykolwiek przycisk jest aktywny
+    if (canUseLightning || canUseFreeze || canUseFrenzy) {
+        superpowerButtonsContainer.style.pointerEvents = 'auto'; 
+    } else {
+        superpowerButtonsContainer.style.pointerEvents = 'none';
+    }
+
+    // Aktualizuj wyświetlanie cooldownów
+    updateSuperpowerCooldownDisplays();
+}
+
+// NOWA FUNKCJA: Aktualizuje tekst na przyciskach supermocy o pozostały czas cooldownu
+function updateSuperpowerCooldownDisplays() {
+    const now = Date.now();
+
+    const updateButtonText = (button, lastUsedTime, originalText) => {
+        // Jeśli gra nieaktywna lub przycisk jest aktywny (dostępny), wyświetl oryginalny tekst
+        if (!isGameActive || (!button.disabled && lastUsedTime === 0)) {
+             button.textContent = originalText;
+             return;
+        }
+
+        const timeLeft = Math.ceil((lastUsedTime + COOLDOWN_DURATION_MS - now) / 1000);
+        if (timeLeft > 0) {
+            button.textContent = `${timeLeft}s`;
+        } else {
+            button.textContent = originalText; // Cooldown minął, pokaż oryginalny tekst
+        }
+    };
+
+    updateButtonText(btnLightning, lastUsedLightningTime, originalLightningText);
+    updateButtonText(btnFreeze, lastUsedFreezeTime, originalFreezeText);
+    updateButtonText(btnFrenzy, lastUsedFrenzyTime, originalFrenzyText);
+}
+
+
+function activateLightningStrike() {
+    if (!isGameActive || btnLightning.disabled) return;
+
+    showMessage("PIORUN ZAGŁADY!", 1500);
+    punchesSinceLastPowerup = 0; // Resetuj licznik uderzeń
+    lastUsedLightningTime = Date.now(); // Ustaw czas ostatniego użycia
+    updateSuperpowerButtons(); // Zablokuj przyciski i zaktualizuj timery
+
+    // Efekt wizualny błyskawicy (generowany kodem)
+    const segments = 10; // Liczba segmentów błyskawicy
+    const ozzyRect = ozzyContainer.getBoundingClientRect();
+    const startX = ozzyRect.left + ozzyRect.width / 2;
+    const startY = ozzyRect.top - 50; // Zaczyna się nad Ozzym
+
+    for (let i = 0; i < segments; i++) {
+        const segment = document.createElement('div');
+        segment.classList.add('lightning-segment');
+        
+        const length = Math.random() * 50 + 30; // Długość segmentu
+        const angle = Math.random() * 40 - 20; // Kąt odchylenia
+        const width = Math.random() * 5 + 3; // Grubość segmentu
+
+        segment.style.width = `${width}px`;
+        segment.style.height = `${length}px`;
+        segment.style.left = `${startX + (Math.random() - 0.5) * 50}px`; // Losowe przesunięcie
+        segment.style.top = `${startY + i * (ozzyRect.height / segments) + (Math.random() - 0.5) * 20}px`;
+        segment.style.transform = `rotate(${angle}deg)`;
+        segment.style.transformOrigin = `center top`; // Obracaj od góry
+
+        lightningEffect.appendChild(segment);
+    }
+
+    lightningEffect.classList.remove('hidden');
+    // Znokautuj Ozzy'ego natychmiast
+    applyDamageToOzzy(ozzyHealth); // Zadaj obrażenia równe aktualnemu zdrowiu
+
+    setTimeout(() => {
+        lightningEffect.classList.add('hidden');
+        lightningEffect.innerHTML = ''; // Usuń segmenty
+    }, 1000); // Czas trwania efektu
+}
+
+function activateIceBlast() { // Zmieniono nazwę funkcji dla jasności
+    if (!isGameActive || btnFreeze.disabled) return; // Używamy btnFreeze, bo ID HTML się nie zmienia
+
+    showMessage("LODOWY WYBUCH!", 1500);
+    punchesSinceLastPowerup = 0; // Resetuj licznik uderzeń
+    lastUsedFreezeTime = Date.now(); // Ustaw czas ostatniego użycia
+    updateSuperpowerButtons(); // Zablokuj przyciski i zaktualizuj timery
+
+    freezeEffect.classList.remove('hidden');
+    freezeEffect.classList.add('active');
+
+    // Efekt kryształków lodu
+    const ozzyRect = ozzyContainer.getBoundingClientRect();
+    for (let i = 0; i < 15; i++) {
+        const shard = document.createElement('div');
+        shard.classList.add('ice-shard');
+        shard.style.left = `${ozzyRect.left + Math.random() * ozzyRect.width}px`;
+        shard.style.top = `${ozzyRect.top + Math.random() * ozzyRect.height}px`;
+        freezeEffect.appendChild(shard);
+    }
+
+    applyDamageToOzzy(ICE_BLAST_DAMAGE); // Zadaj bezpośrednie obrażenia
+
+    setTimeout(() => {
+        freezeEffect.classList.add('hidden');
+        freezeEffect.classList.remove('active');
+        freezeEffect.innerHTML = ''; // Usuń kryształki
+    }, 1000); // Czas trwania efektu wizualnego
+}
+
+function activateFrenzy() {
+    if (!isGameActive || btnFrenzy.disabled) return;
+
+    showMessage("SZAŁ BOJOWY!", 1500);
+    punchesSinceLastPowerup = 0; // Resetuj licznik uderzeń
+    lastUsedFrenzyTime = Date.now(); // Ustaw czas ostatniego użycia
+    updateSuperpowerButtons(); // Zablokuj przyciski i zaktualizuj timery
+
+    applyDamageToOzzy(FRENZY_INITIAL_DAMAGE); // Zadaj początkowe obrażenia
+
+    frenzyModeActive = true;
+    PUNCH_DAMAGE *= FRENZY_DAMAGE_MULTIPLIER; // Zwiększ obrażenia od uderzeń
+    frenzyEffect.classList.remove('hidden');
+    frenzyEffect.classList.add('active');
+
+    clearTimeout(frenzyTimerId); // Upewnij się, że poprzedni timer szału jest wyczyszczony
+    frenzyTimerId = setTimeout(() => {
+        frenzyModeActive = false;
+        PUNCH_DAMAGE = 10; // Przywróć normalne obrażenia
+        frenzyEffect.classList.add('hidden');
+        frenzyEffect.classList.remove('active');
+        showMessage("Szał minął. Normalne uderzenia.", 1500);
+    }, FRENZY_DURATION_MS);
+}
+
+
 // --- Funkcje Gry ---
 function resetGame() {
     console.log("resetGame wywołane."); 
@@ -174,6 +363,7 @@ function resetGame() {
     scoreDisplay.textContent = score;
     INITIAL_OZZY_HEALTH = 100; 
     ozzyHealth = INITIAL_OZZY_HEALTH;
+    PUNCH_DAMAGE = 10; // Upewnij się, że obrażenia są zresetowane
     updateHealthBar();
     ozzyImage.classList.remove('hit-effect'); 
     ozzyContainer.classList.add('hidden'); // Ukryj Ozzy'ego na starcie
@@ -181,20 +371,43 @@ function resetGame() {
     // Usuń wszystkie cytaty z ekranu przy resecie
     quoteImagesContainer.innerHTML = ''; 
 
-    messageDisplay.style.display = 'none';
+    // Resetuj stan supermocy i cooldowny
+    punchesSinceLastPowerup = 0;
+    lastUsedLightningTime = 0;
+    lastUsedFreezeTime = 0;
+    lastUsedFrenzyTime = 0;
+    
+    frenzyModeActive = false;
+    clearTimeout(frenzyTimerId); // Wyczyść timer szału
+
+    lightningEffect.classList.add('hidden');
+    freezeEffect.classList.add('hidden');
+    frenzyEffect.classList.add('hidden');
+    lightningEffect.innerHTML = ''; // Wyczyść segmenty błyskawicy
+    freezeEffect.innerHTML = ''; // Wyczyść kryształki lodu
+
+
+    messageDisplay.style.display = 'none'; // Ukryj ogólny komunikat
+    // Usuń wszystkie aktywne komunikaty nokautu, jeśli jakieś są
+    document.querySelectorAll('.knockout-message').forEach(el => el.remove());
+
 
     isGameActive = false; 
-    isOzzyDown = false; 
     endScreen.classList.add('hidden');
     leaderboardScreen.classList.add('hidden'); 
     startScreen.classList.remove('hidden'); // Pokaż ekran startowy
     
+    // Zatrzymanie intervalu timera cooldownów
+    clearInterval(superpowerCooldownIntervalId);
+    updateSuperpowerCooldownDisplays(); // Końcowa aktualizacja, by pokazać oryginalny tekst
+
     if (backgroundMusic) {
         backgroundMusic.pause();
         backgroundMusic.currentTime = 0; 
     }
 }
 
+// Funkcja do wyświetlania OGÓLNYCH komunikatów (nadal blokująca kliknięcia pod spodem, jeśli nie ma pointer-events: none)
 function showMessage(message, duration = 1500) {
     messageDisplay.textContent = message;
     messageDisplay.style.display = 'block';
@@ -229,11 +442,35 @@ function startGame() {
     scoreDisplay.textContent = score;
     INITIAL_OZZY_HEALTH = 100; 
     ozzyHealth = INITIAL_OZZY_HEALTH; 
+    PUNCH_DAMAGE = 10; // Upewnij się, że obrażenia są zresetowane
     updateHealthBar(); 
     ozzyImage.classList.remove('hit-effect'); 
 
+    // Resetuj supermoce na start gry
+    punchesSinceLastPowerup = 0;
+    lastUsedLightningTime = 0;
+    lastUsedFreezeTime = 0;
+    lastUsedFrenzyTime = 0;
+    
+    frenzyModeActive = false;
+    clearTimeout(frenzyTimerId); // Wyczyść timer szału
+
+    lightningEffect.classList.add('hidden');
+    freezeEffect.classList.add('hidden');
+    frenzyEffect.classList.add('hidden');
+    lightningEffect.innerHTML = '';
+    freezeEffect.innerHTML = '';
+    // Usuń wszystkie aktywne komunikaty nokautu, jeśli jakieś są
+    document.querySelectorAll('.knockout-message').forEach(el => el.remove());
+
+
     // Usuń cytaty, jeśli jakieś zostały z poprzedniej sesji gry
     quoteImagesContainer.innerHTML = '';
+
+    // Uruchomienie intervalu timera cooldownów
+    clearInterval(superpowerCooldownIntervalId); // Wyczyść poprzedni, jeśli istnieje
+    superpowerCooldownIntervalId = setInterval(updateSuperpowerCooldownDisplays, 1000);
+    updateSuperpowerButtons(); // Początkowa aktualizacja stanu i tekstu przycisków
 
     if (backgroundMusic) {
         backgroundMusic.play().catch(e => console.error("Błąd odtwarzania backgroundMusic:", e));
@@ -245,8 +482,30 @@ function endGame(message) {
     isGameActive = false;
     ozzyContainer.classList.add('hidden'); // Ukryj Ozzy'ego po zakończeniu gry
     scoreDisplay.classList.add('hidden'); // Ukryj licznik
-    messageDisplay.style.display = 'none';
+    messageDisplay.style.display = 'none'; // Ukryj ogólny komunikat
     quoteImagesContainer.innerHTML = ''; // Usuń wszystkie cytaty po zakończeniu gry
+    // Usuń wszystkie aktywne komunikaty nokautu, jeśli jakieś są
+    document.querySelectorAll('.knockout-message').forEach(el => el.remove());
+
+
+    // Zresetuj wszystkie aktywne supermoce po zakończeniu gry
+    frenzyModeActive = false;
+    PUNCH_DAMAGE = 10; // Przywróć normalne obrażenia
+    clearTimeout(frenzyTimerId);
+    lightningEffect.classList.add('hidden');
+    freezeEffect.classList.add('hidden');
+    frenzyEffect.classList.add('hidden');
+    lightningEffect.innerHTML = '';
+    freezeEffect.innerHTML = '';
+    punchesSinceLastPowerup = 0; // Resetuj licznik do supermocy
+    lastUsedLightningTime = 0;
+    lastUsedFreezeTime = 0;
+    lastUsedFrenzyTime = 0;
+    updateSuperpowerButtons(); // Zaktualizuj stan przycisków
+
+    // Zatrzymanie intervalu timera cooldownów
+    clearInterval(superpowerCooldownIntervalId);
+
 
     document.getElementById('end-message').textContent = message;
     finalScoreDisplay.textContent = score;
@@ -261,53 +520,74 @@ function endGame(message) {
     }
 }
 
+// NOWA FUNKCJA: Obsługuje znokautowanie Ozzy'ego (wydzielona z handlePunch)
+function handleOzzyKnockout() {
+    score++; 
+    scoreDisplay.textContent = score;
+
+    // --- POPRAWKA: Usuń istniejące komunikaty nokautu przed utworzeniem nowego ---
+    document.querySelectorAll('.knockout-message').forEach(el => el.remove());
+    // -------------------------------------------------------------------------
+
+    // Utwórz i wyświetl nieblokujący komunikat o nokaucie
+    const knockoutMsgElement = document.createElement('div');
+    knockoutMsgElement.textContent = 'Ozzy zajebany!';
+    knockoutMsgElement.classList.add('knockout-message');
+    gameContainer.appendChild(knockoutMsgElement);
+
+    // Ozzy znika natychmiast po nokaucie
+    ozzyContainer.classList.add('hidden'); 
+    
+    // --- KLUCZOWA ZMIANA: Zdrowie Ozzy'ego odnawia się natychmiast ---
+    if (score > 0 && score % 5 === 0) { 
+         INITIAL_OZZY_HEALTH += 20; 
+         // Komunikat o zwiększeniu zdrowia nadal wyświetlany przez showMessage
+         showMessage(`Ozzy jest silniejszy! Jego zdrowie to ${INITIAL_OZZY_HEALTH}!`, 2000);
+    }
+    ozzyHealth = INITIAL_OZZY_HEALTH; 
+    updateHealthBar(); // Pasek zdrowia aktualizuje się natychmiast
+    // ---------------------------------------------------------------
+
+    // Ozzy pojawia się ponownie po krótkim opóźnieniu (wizualny efekt "powstawania")
+    setTimeout(() => {
+        ozzyContainer.classList.remove('hidden'); 
+        ozzyImage.classList.remove('hit-effect'); 
+    }, 1000); // Ozzy wizualnie wstaje po 1 sekundzie
+
+    // Komunikat o nokaucie znika po zakończeniu animacji (2 sekundy)
+    setTimeout(() => {
+        knockoutMsgElement.remove();
+    }, 2000); // Dopasowane do czasu trwania animacji CSS (fadeOutUp)
+}
+
 function handlePunch(event) {
     console.log("handlePunch wywołane."); 
-    if (!isGameActive || isOzzyDown) { 
+    // Usunięto warunek isOzzyDown, aby umożliwić klikanie Ozzy'ego zaraz po nokaucie
+    if (!isGameActive) { 
         return;
     }
 
-    // ZMIENIONO: Tworzymy nową instancję Audio dla każdego uderzenia
     const punchSoundInstance = new Audio('punch.mp3');
     punchSoundInstance.play().catch(e => console.error("Błąd odtwarzania punchSoundInstance:", e));
-    // Opcjonalnie: usuń instancję po zakończeniu odtwarzania, aby zwolnić pamięć
     punchSoundInstance.onended = () => {
         punchSoundInstance.remove();
     };
 
-
-    ozzyHealth -= PUNCH_DAMAGE;
-    ozzyHealth = Math.max(0, ozzyHealth); 
-    updateHealthBar(); 
+    applyDamageToOzzy(PUNCH_DAMAGE); 
 
     ozzyImage.classList.add('hit-effect');
     setTimeout(() => {
         ozzyImage.classList.remove('hit-effect');
     }, 150); 
     
-    // NOWE: Sprawdzamy, czy Ozzy został trafiony i czy jest szansa na pojawienie się cytatu
+    // Sprawdzamy, czy Ozzy został trafiony i czy jest szansa na pojawienie się cytatu
     if (ozzyHealth > 0 && Math.random() < 0.3) { // 30% szans na pojawienie się cytatu po trafieniu
         spawnRandomQuote();
     }
 
-    if (ozzyHealth <= 0) {
-        isOzzyDown = true; 
-        score++; 
-        scoreDisplay.textContent = score;
-
-        showMessage('Ozzy zajebany!', 1500);
-
-        setTimeout(() => {
-            if (score > 0 && score % 5 === 0) { 
-                 INITIAL_OZZY_HEALTH += 20; 
-                 showMessage(`Ozzy jest silniejszy! Jego zdrowie to ${INITIAL_OZZY_HEALTH}!`, 2000);
-            }
-            ozzyHealth = INITIAL_OZZY_HEALTH; 
-            updateHealthBar();
-            ozzyImage.classList.remove('hit-effect'); 
-            isOzzyDown = false; 
-        }, 1500); 
-    }
+    // Zwiększ licznik uderzeń do supermocy
+    punchesSinceLastPowerup++;
+    updateSuperpowerButtons(); // Aktualizuj stan przycisków supermocy (w tym cooldowny)
 }
 
 // Ważne: to sprawdza, czy skrypt jest w ogóle uruchamiany
@@ -323,8 +603,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     scoreDisplay.classList.add('hidden'); 
     messageDisplay.style.display = 'none';
     quoteImagesContainer.innerHTML = ''; // Upewnij się, że kontener cytatów jest pusty na starcie
+    // Usuń wszystkie aktywne komunikaty nokautu, jeśli jakieś są
+    document.querySelectorAll('.knockout-message').forEach(el => el.remove());
 
-    resetGame(); 
+
+    resetGame(); // Ta funkcja również resetuje supermoce i cooldowny
 
     console.log("Initial game container dimensions:", gameContainer.offsetWidth, gameContainer.offsetHeight);
     console.log("Initial target image (Ozzy) dimensions:", ozzyImage.offsetWidth, ozzyImage.offsetHeight);
@@ -340,7 +623,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     console.log("DOMContentLoaded: Uwierzytelnianie zakończone."); 
 
-    // PRZENIESIONE OBSŁUGI ZDARZEŃ
+    // --- Obsługa zdarzeń ---
     startButton.addEventListener('click', () => {
         console.log("Kliknięto przycisk START!"); 
         const nick = nicknameInput.value.trim();
@@ -381,6 +664,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log("Kliknięto przycisk WRÓĆ DO MENU!"); 
         leaderboardScreen.classList.add('hidden'); 
         startScreen.classList.remove('hidden'); 
-        // resetGame() jest wywoływane przez backToStartButton do menu, więc nie ma potrzeby wywoływania go dwa razy
     });
+
+    // Obsługa kliknięć przycisków supermocy
+    btnLightning.addEventListener('click', activateLightningStrike);
+    btnFreeze.addEventListener('click', activateIceBlast); // Zmieniono na activateIceBlast
+    btnFrenzy.addEventListener('click', activateFrenzy);
 });
