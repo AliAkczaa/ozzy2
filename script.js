@@ -71,7 +71,7 @@ const QUOTE_SIZE_PX = 150; // Rozmiar obrazków cytatów
 
 // --- Referencje do elementów audio ---
 const backgroundMusic = document.getElementById('background-music');
-const punchSound = document.getElementById('punch-sound'); 
+// USUNIĘTO: const punchSound = document.getElementById('punch-sound'); - teraz tworzymy dynamicznie
 
 
 // --- Funkcje Leaderboarda ---
@@ -267,10 +267,14 @@ function handlePunch(event) {
         return;
     }
 
-    if (punchSound) {
-        punchSound.currentTime = 0; 
-        punchSound.play().catch(e => console.error("Błąd odtwarzania punchSound:", e));
-    }
+    // ZMIENIONO: Tworzymy nową instancję Audio dla każdego uderzenia
+    const punchSoundInstance = new Audio('punch.mp3');
+    punchSoundInstance.play().catch(e => console.error("Błąd odtwarzania punchSoundInstance:", e));
+    // Opcjonalnie: usuń instancję po zakończeniu odtwarzania, aby zwolnić pamięć
+    punchSoundInstance.onended = () => {
+        punchSoundInstance.remove();
+    };
+
 
     ozzyHealth -= PUNCH_DAMAGE;
     ozzyHealth = Math.max(0, ozzyHealth); 
@@ -291,7 +295,7 @@ function handlePunch(event) {
         score++; 
         scoreDisplay.textContent = score;
 
-        showMessage('Ozzy padł! Znokautowany!', 1500);
+        showMessage('Ozzy zajebany!', 1500);
 
         setTimeout(() => {
             if (score > 0 && score % 5 === 0) { 

@@ -168,15 +168,6 @@ button:active {
     box-shadow: 0 2px 4px rgba(0, 255, 0, 0.5);
 }
 
-#score-display, #message-display {
-    background-color: rgba(0, 0, 0, 0.8);
-    border: 2px solid lime;
-    border-radius: 10px;
-    padding: 10px 15px;
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
-    z-index: 20; 
-}
-
 #score-display {
     position: absolute;
     top: 2vh;
@@ -185,6 +176,12 @@ button:active {
     font-weight: bold;
     color: yellow;
     text-shadow: 2px 2px 4px black;
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 2px solid lime;
+    border-radius: 10px;
+    padding: 10px 15px;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    z-index: 20; /* Pozostaje na 20, pod komunikatami i ekranami */
 }
 
 #message-display {
@@ -201,7 +198,7 @@ button:active {
     display: none;
     border: 5px solid red;
     box-shadow: 0 0 30px red;
-    z-index: 30; 
+    z-index: 999 !important; /* WAŻNE: Zwiększono z-index i dodano !important */
 }
 
 /* Style dla ekranów, z jawny display: none */
@@ -218,7 +215,7 @@ button:active {
     justify-content: center;
     align-items: center;
     text-align: center;
-    z-index: 40; 
+    z-index: 40; /* Ekrany nakładkowe są na wierzchu, ale pod komunikatami */
     padding: 2vw;
     box-sizing: border-box;
 }
